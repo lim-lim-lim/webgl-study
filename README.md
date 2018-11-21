@@ -12,7 +12,7 @@
 ![CPU&GPU](./img/webgl_cpu_gpu.png)
 GPU에서 화면을 렌더링 하기 위한 필요 요소
 - 색상버퍼 : 색상 정보를 담고 있는 스크린상의 각 픽젤 정보를 저장핸 직사각형 형태의 메모리 구조(RGB/RGBA)
-- Z버퍼 : 픽셀이 갖는 z index 값을 저장하며 색상버퍼와 같은 크기
+- Z버퍼 : 픽셀이 갖는 z index 값을 저장하며, 색상버퍼와 같은 크기
 - 스텐실버퍼 : 특정위치에 오브젝트가 그려지는 모양을 조정( 그림자 표현 )
 - 텍스쳐메모리 : GPU용 이미지 메모리
 - 비디오컨트롤러 : 주기적으로 라인단위 화면갱신( 초당60회/60Hz )
@@ -34,7 +34,7 @@ GPU에서 화면을 렌더링 하기 위한 필요 요소
 - varying : 버텍스셰이더가 프래그먼트에서 값을 전달할때 사용.
 
 #### 버텍스셰이더 소스코드
-```glsl
+```
 attribute vec4 a_position;
 void main(){
     gl_Position = a_position;
@@ -56,7 +56,7 @@ void main(){
 - 픽셀에 색을 채우는 단계
 
 #### 프래그먼트셰이더 소스코드
-```glsl
+```
 precision mediump float;
 void main() {
   gl_FragColor = vec4(1, 0, 0.5, 1);
@@ -70,4 +70,90 @@ void main() {
 - 블랜딩
 - 디더링
 
-### 삼각형 출력
+## 삼각형 출력
+![view frustum](./img/webgl_triangle.png)
+
+1. webgl 컨텍스트 생성
+2. 버텍스 버퍼 생성
+3. 셰이더소스 작성
+4. 셰이더 컴파일
+5. 셰이더 프로그램 생성
+6. 그리기
+### 1. webgl 컨텍스트 생성
+``` javascript
+const canvas = document.getElementById('gl-canvas');
+const gl = canvas.getContext('webgl');
+```
+### 2. 버텍스 버퍼 생성
+``` javascript
+const vertexBuffer = gl.createBuffer();
+gl.bindBuffer(gl.ARRAY_BUFFER,  vertexBuffer);
+gl.bufferData(gl.ARRAY_BUFFER, 
+              new Float32Array([
+                  0, .5, 0,
+                  -.5, -.5, 0,
+                  .5, -.5, 0]), 
+                  gl.STATIC_DRAW);
+```
+### 3. 셰이더소스 작성
+``` javascript
+const vertexShaderSource = `
+    attribute vec3 aVertexPosition;
+    void main(){
+        gl_Position = vec4(aVertexPosition, 1);
+    }
+`;
+
+const fragmentShaderSource = `
+    precision mediump float;
+    void main(){
+        gl_FragColor = vec4(1, 1, 1, 1);
+    }
+`;
+```
+### 4. 셰이더 컴파일
+``` javascript
+const vertexShader = gl.createShader(gl.VERTEX_SHADER);
+gl.shaderSource(vertexShader, vertexShaderSource);
+gl.compileShader(vertexShader);
+if(!gl.getShaderParameter(vertexShader, gl.COMPILE_STATUS)){
+    console.log( '버텍스 셰이더 컴파일 실패' );
+    gl.deleteShader(vertexShader);
+}
+
+const fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
+gl.shaderSource(fragmentShader, fragmentShaderSource);
+gl.compileShader(fragmentShader);
+if(!gl.getShaderParameter(fragmentShader, gl.COMPILE_STATUS)){
+    console.log( '프레그먼트 셰이더 컴파일 실패' );
+    gl.deleteShader(fragmentShader);
+}
+```
+### 5. 셰이더 프로그램 생성
+``` javascript
+const shaderProgram = gl.createProgram();
+gl.attachShader(shaderProgram, vertexShader);
+gl.attachShader(shaderProgram, fragmentShader);
+gl.linkProgram(shaderProgram);
+if(!gl.getProgramParameter(shaderProgram, gl.LINK_STATUS)){
+    console.log( '셰이더 프로그렘 링크 실패' );
+}
+gl.useProgram(shaderProgram);
+```
+### 6. 그리기
+``` javascript
+gl.clearColor(0, 0, 0, 1);
+gl.viewport(0, 0, canvas.width, canvas.height);
+gl.clear(gl.COLOR_BUFFER_BIT);
+gl.vertexAttribPointer(
+    gl.getAttribLocation(shaderProgram, 'aVertexPosition'), 
+    3, 
+    gl.FLOAT, 
+    false, 
+    0, 
+    0 
+);
+gl.enableVertexAttribArray(gl.getAttribLocation(shaderProgram, 'aVertexPosition'));
+gl.drawArrays(gl.TRIANGLES, 0, 3 );
+```
+
